@@ -1,3 +1,5 @@
+''' Implementation of Bubble Sort, for rmotr class 2. Test cases included. '''
+
 import unittest
 
 def bubble_sort(seq):
