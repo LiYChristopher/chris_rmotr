@@ -32,7 +32,6 @@ class SimplePasswordGenerator(object):
         return self
 
     def next(self):  # use __next__ in Python 3.x
-
         password = ''.join([choice(self.available_chars)
                             for i in range(self.length)])
         return password
