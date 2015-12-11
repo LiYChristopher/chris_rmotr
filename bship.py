@@ -9,7 +9,7 @@ class Grid(object):
     '''
     def __init__(self):
         self._inputs = [i+str(j) for i in map(chr, range(65, 75)) for j in range(1, 11)]
-        self.grid = OrderedDict(zip(self._inputs, [' ']*len(self._inputs)))
+        self.grid = OrderedDict(zip(self._inputs, ['_|']*len(self._inputs)))
 
     def __repr__(self):
         return 'Grid({})'.format(self.grid)
@@ -17,7 +17,13 @@ class Grid(object):
     def __str__(self):
         ''' Need to implement a way to show the grid in a good format
         '''
-        pass
+        for row in range(65, 75):
+            row_idx = chr(row)
+            row_keys = filter(lambda key: key if key.startswith(row_idx)
+                                else None, self.grid.keys())
+            row = [self.grid[e] for e in row_keys]
+            print ''.join(row)
+        return 'Grid'
 
     def place(self, *ships):
         ''' takes in a list of ships and places them on the grid if ships fit
@@ -66,7 +72,7 @@ class Aircraft(Ship):
     '''
     def __init__(self, count, position, orientation):
         super(Aircraft, self).__init__(count, position, orientation)
-        self.marker = 'A'
+        self.marker = 'A|'
         self.size = 5
 
 
@@ -75,7 +81,7 @@ class Submarine(Ship):
     '''
     def __init__(self, count, position, orientation):
         super(Submarine, self).__init__(count, position, orientation)
-        self.marker = 'S'
+        self.marker = 'S|'
         self.size = 3
 
 
@@ -84,51 +90,56 @@ class PatrolBoat(Ship):
     '''
     def __init__(self, count, position, orientation):
         super(PatrolBoat, self).__init__(count, position, orientation)
-        self.marker = 'P'
+        self.marker = 'P|'
         self.size = 2
 
 
-def show_available_ships():
-    ''' creates random number of aircrafts, submarines and patrol boats
+class GameEngine(object):
     '''
-    num_a, num_s, num_pb = [randint(1, 4) for i in range(3)]
-    print 'You have:'
-    print '{} Aircraft (size = 5)'.format(num_a)
-    print '{} Submarine (size = 3)'.format(num_s)
-    print '{} Patrol Boat (size = 2)'.format(num_pb)
-    return num_a, num_s, num_pb
-
-
-def choose_ships(numa, nums, numpb):
-    ''' follows the Defend strategy for creating the ships.
-        return the actual relevant ship objects
+    This class control gamestate, and regulates flow
     '''
-    aircrafts_input = raw_input('Position, Orientation for Aircrafts: ')
-    submarines_input = raw_input('Position, Orientation for Submarines: ')
-    patrol_boats_input = raw_input('Position, Orientation for Patrol Boats: ')
+    def __init__(self):
+        pass
 
-    a_pos, a_orient = map(str.strip, aircrafts_input.split(','))
-    s_pos, s_orient = map(str.strip, submarines_input.split(','))
-    pb_pos, pb_orient = map(str.strip, patrol_boats_input.split(','))
+    def show_available_ships(self):
+        ''' creates random number of aircrafts, submarines and patrol boats
+        '''
+        num_a, num_s, num_pb = [randint(1, 4) for i in range(3)]
+        print 'You have:'
+        print '{} Aircraft (size = 5)'.format(num_a)
+        print '{} Submarine (size = 3)'.format(num_s)
+        print '{} Patrol Boat (size = 2)'.format(num_pb)
+        return num_a, num_s, num_pb
+    
+    def choose_ships(self, numa, nums, numpb):
+        ''' follows the Defend strategy for creating the ships.
+            return the actual relevant ship objects
+        '''
+        aircrafts_input = raw_input('Position, Orientation for Aircrafts: ')
+        submarines_input = raw_input('Position, Orientation for Submarines: ')
+        patrol_boats_input = raw_input('Position, Orientation for Patrol Boats: ')
+    
+        a_pos, a_orient = map(str.strip, aircrafts_input.split(','))
+        s_pos, s_orient = map(str.strip, submarines_input.split(','))
+        pb_pos, pb_orient = map(str.strip, patrol_boats_input.split(','))
+    
+        # create ships
+        aircrafts = Aircraft(numa, a_pos, a_orient)
+        submarines = Submarine(nums, s_pos, s_orient)
+        patrol_boats = PatrolBoat(numpb, pb_pos, pb_orient)
+        return aircrafts, submarines, patrol_boats
+    
+    def initialize(self):
+        grid = Grid()
+        print grid
+        numa, nums, numpb = self.show_available_ships() # get number of aircrafts from show_available_ships
+        air, sub, pb = self.choose_ships(numa, nums, numpb)   #user inputs ship placement
+    
+        print grid.place(air, sub, pb)    #takes ships ==> places them on grid ==> prints for user
+        print grid
 
-    # create ships
-    aircrafts = Aircraft(numa, a_pos, a_orient)
-    submarines = Submarine(nums, s_pos, s_orient)
-    patrol_boats = PatrolBoat(numpb, pb_pos, pb_orient)
-    return aircrafts, submarines, patrol_boats
 
-
-def initialize():
-    g = Grid()
-
-    # get number of aircrafts from show_available_ships
-    numa, nums, numpb = show_available_ships()
-
-    air, sub, pb = choose_ships(numa, nums, numpb)
-
-    print g.place(air, sub, pb)
-    print g.grid
-
+#implementation zone
 if __name__ == '__main__':
-    grid = Grid()
-    initialize()
+    game = GameEngine()
+    game.initialize()
