@@ -23,7 +23,7 @@ Each node has a reference to other Node, what makes it
 a recursive class, it'll point to itself.
 
 """
-from copy import copy, deepcopy
+from copy import deepcopy
 
 
 class Node(object):
@@ -42,33 +42,27 @@ class LinkedList(object):
         self.start = None
         self.end = None
         if values is not None:
-            self.start = Node()
-            self.link(self.start, values)
+            for val in values:
+                self.append(val)
 
     def __str__(self):
-        if type(self.start) is Node:
-            start = self.start.elem
-        else:
-            start = None
-        if type(self.end) is Node:
-            end = self.end.elem
-        else:
-            end = None
-        return "LinkedList-Start {0}, End {1}, Length {2}".format(start, end, self.count())
+        return str([i.elem for i in self if i is not None])
 
-    def __add__(self, values):
-        print values.display_chain()
-        if self.start is None:
-            self.start = values.start
-            self.end = self.start
-        elif self.start.next is None:
-            self.start.next = values.start
-            self.end = self.start.next
-        elif self.end.next is None:
-            self.end.next = values.start
-        return self.display_chain()
+    def __add__(self, other):
 
-    def __iadd__(self, values):
+        added = deepcopy(self)
+        for i in other:
+            if i is None:
+                return added
+            added.append(i.elem)
+        return added
+
+    def __iadd__(self, other):
+
+        for i in other:
+            if i is None:
+                return self
+            self.append(i.elem)
         return self
 
     def __getitem__(self, index):
@@ -78,7 +72,10 @@ class LinkedList(object):
         for i in xrange(0, index + 1):
             if i == index:
                 return current_node
+            if i >= self.count():
+                raise StopIteration
             current_node = current_node.next
+        return
 
     def link(self, current_node, values):
         if len(values) == 0:
@@ -93,19 +90,6 @@ class LinkedList(object):
             current_node.next = Node(next_elem)
             return self.link(current_node.next, values[values.index(next_elem):])
         return
-
-    def display_chain(self):
-        chain = []
-        cur_elem = self.start
-        if cur_elem is None:
-            return chain
-        chain.append(cur_elem.elem)
-        while cur_elem != self.end:
-            if cur_elem.next is None:
-                return chain
-            cur_elem = cur_elem.next
-            chain.append(cur_elem.elem)
-        return chain
 
     def count(self):
         if self.start is None:
@@ -127,18 +111,16 @@ class LinkedList(object):
             self.start.next = Node(value)
             self.end = self.start.next
         elif self.end.next is None:
-            #print 'Running .. (sen is None)'
-            current_end = self.__getitem__(-1)
-            print 'current end', current_end.elem
+            current_end = self[(-1)]
             current_end.next = Node(value)
-            print 'new end', self.__getitem__(-1).elem
             self.end = current_end.next
         return
 
     def __eq__(self, other):
-        return (self.display_chain() == other.display_chain())
+        return (self.__str__() == other.__str__())
 
     def pop(self, index=-1):
+
         # raise errors
         if self.count() == 0:
             raise IndexError('No elements to pop.')
@@ -159,13 +141,6 @@ class LinkedList(object):
             else:
                 self[(index - 1)].next = None
         return popped
-
-
-m = LinkedList([1])
-l = LinkedList([2, 3])
-print 'add', m + l
-print 'm -', m.display_chain()
-print 'l -', l.display_chain()
 
 
 if __name__ == '__main__':
@@ -302,4 +277,56 @@ if __name__ == '__main__':
                 self.ListImplementationClass([1]),
                 self.ListImplementationClass([]))
 
-    #unittest.main()
+        def test_add_list(self):
+
+            my_list = self.ListImplementationClass()
+            new_list = my_list + self.ListImplementationClass([1])
+            self.assertEqual(new_list, self.ListImplementationClass([1]))
+            self.assertEqual(my_list, self.ListImplementationClass())
+
+            my_list = self.ListImplementationClass([1, 2])
+            new_list = my_list + self.ListImplementationClass([3, 4])
+            self.assertEqual(new_list, self.ListImplementationClass([1, 2, 3, 4]))
+            self.assertEqual(my_list, self.ListImplementationClass([1, 2]))
+
+            my_list = self.ListImplementationClass([1, 2])
+            new_list = my_list + self.ListImplementationClass()
+            self.assertEqual(new_list, self.ListImplementationClass([1, 2]))
+            self.assertEqual(my_list, self.ListImplementationClass([1, 2]))
+
+            my_list = self.ListImplementationClass()
+            new_list = my_list + self.ListImplementationClass()
+            self.assertEqual(new_list, self.ListImplementationClass())
+            self.assertEqual(new_list.count(), 0)
+            self.assertEqual(my_list, self.ListImplementationClass())
+            self.assertEqual(my_list.count(), 0)
+
+        def test_str(self):
+            my_list = self.ListImplementationClass([1, 2, 3])
+            self.assertEqual(str(my_list), "[1, 2, 3]")
+
+            my_list = self.ListImplementationClass()
+            self.assertEqual(str(my_list), "[]")
+
+            my_list = self.ListImplementationClass([])
+            self.assertEqual(str(my_list), "[]")
+
+        def test_add_equals_list(self):
+            my_list = self.ListImplementationClass()
+            my_list += self.ListImplementationClass([1, 2])
+            self.assertEqual(my_list, self.ListImplementationClass([1, 2]))
+
+            my_list = self.ListImplementationClass([1, 2])
+            my_list += self.ListImplementationClass([3, 4])
+            self.assertEqual(my_list, self.ListImplementationClass([1, 2, 3, 4]))
+
+            my_list = self.ListImplementationClass([1, 2])
+            my_list += self.ListImplementationClass()
+            self.assertEqual(my_list, self.ListImplementationClass([1, 2]))
+
+            my_list = self.ListImplementationClass()
+            my_list += self.ListImplementationClass()
+            self.assertEqual(my_list.count(), 0)
+            self.assertEqual(my_list, self.ListImplementationClass())
+
+    unittest.main()
