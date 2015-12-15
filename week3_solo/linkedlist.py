@@ -23,91 +23,149 @@ Each node has a reference to other Node, what makes it
 a recursive class, it'll point to itself.
 
 """
+from copy import copy, deepcopy
 
 
 class Node(object):
 
-    def __init__(self, elem, link=None):
+    def __init__(self, elem=None, next=None):
         self.elem = elem
-        self.next = None
+        self.next = next
 
-    def connect(self, elem):
-        self.next = Node(elem)
-        return
+    def __eq__(self, other):
+        return (self.elem, self.next == other.elem, self.next)
 
 
 class LinkedList(object):
 
     def __init__(self, values=None):
-        self.values = []
+        self.start = None
+        self.end = None
         if values is not None:
-            self.__iadd__(values)
-        self.start = self.values[0] if self.values else None
-        self.end = self.values[-1] if self.values else None
-
-    def update_start(self):
-        self.start = self.values[0] if self.values else None
-        return
-
-    def update_end(self):
-        self.end = self.values[-1] if self.values else None
-        return
+            self.start = Node()
+            self.link(self.start, values)
 
     def __str__(self):
-        return str(self.values)
+        if type(self.start) is Node:
+            start = self.start.elem
+        else:
+            start = None
+        if type(self.end) is Node:
+            end = self.end.elem
+        else:
+            end = None
+        return "LinkedList-Start {0}, End {1}, Length {2}".format(start, end, self.count())
 
     def __add__(self, values):
-        current_values = self.values[:]
-        if len(values) < 2:
-            current_values.append(Node(values[0]))
-            self.update_start()
-            self.update_end()
-            return current_values
-        else:
-            pass
-        return
+        print values.display_chain()
+        if self.start is None:
+            self.start = values.start
+            self.end = self.start
+        elif self.start.next is None:
+            self.start.next = values.start
+            self.end = self.start.next
+        elif self.end.next is None:
+            self.end.next = values.start
+        return self.display_chain()
 
     def __iadd__(self, values):
-        if len(values) < 2:
-            self.values.append(Node(values[0]))
-        else:
-            for val in values:
-                if len(self.values) < 1:
-                    print 'add first element', val
-                    self.values.append(Node(val))
-                    continue
-                end_node = self.values[-1]
-                end_node.connect(val)
-                self.values.append(end_node.next)
-                #self.values.append(cur_node.conn)
-        self.update_start()
-        self.update_end()
         return self
+
+    def __getitem__(self, index):
+        if index < 0:
+            index = self.count() + index
+        current_node = self.start
+        for i in xrange(0, index + 1):
+            if i == index:
+                return current_node
+            current_node = current_node.next
+
+    def link(self, current_node, values):
+        if len(values) == 0:
+            self.start = None
+        elif len(values) == 1:
+            if self.start.elem is None:
+                self.start = Node(values[0])
+            else:
+                self.end = Node(values[0])
+        else:
+            current_node.elem, next_elem = values[0], values[1]
+            current_node.next = Node(next_elem)
+            return self.link(current_node.next, values[values.index(next_elem):])
+        return
+
+    def display_chain(self):
+        chain = []
+        cur_elem = self.start
+        if cur_elem is None:
+            return chain
+        chain.append(cur_elem.elem)
+        while cur_elem != self.end:
+            if cur_elem.next is None:
+                return chain
+            cur_elem = cur_elem.next
+            chain.append(cur_elem.elem)
+        return chain
+
+    def count(self):
+        if self.start is None:
+            return 0
+        count = 1
+        cur_elem = self.start
+        while cur_elem != self.end:
+            if cur_elem.next is None:
+                return count
+            cur_elem = cur_elem.next
+            count += 1
+        return count
 
     def append(self, value):
-        if not self.values:
-            self.values.append(Node(value))
+        if self.start is None:
+            self.start = Node(value)
+            self.end = self.start
+        elif self.start.next is None:
+            self.start.next = Node(value)
+            self.end = self.start.next
+        elif self.end.next is None:
+            #print 'Running .. (sen is None)'
+            current_end = self.__getitem__(-1)
+            print 'current end', current_end.elem
+            current_end.next = Node(value)
+            print 'new end', self.__getitem__(-1).elem
+            self.end = current_end.next
+        return
+
+    def __eq__(self, other):
+        return (self.display_chain() == other.display_chain())
+
+    def pop(self, index=-1):
+        # raise errors
+        if self.count() == 0:
+            raise IndexError('No elements to pop.')
+        elif index >= self.count():
+            raise IndexError('Index out-of-range')
+
+        # operations
+        if index == 0:
+            popped = self.start.elem
+            self.start = self[(index + 1)]
+        elif 0 < index < self.count() - 1:
+            popped = self[(index)].elem
+            self[(index - 1)].next = self[(index + 1)]
         else:
-            end_node = self.values[-1]
-            end_node.connect(value)
-            self.values += end_node.next
-        self.update_start()
-        self.update_end()
-        return self
-
-    def pop(self):
-        pass
+            popped = self[(index)].elem
+            if self.count() == 1:
+                self.start = None
+            else:
+                self[(index - 1)].next = None
+        return popped
 
 
-l = LinkedList()
-l.append(1)
 m = LinkedList([1])
-print l.start.elem
-print l.start.next
-print m.start.elem
-print m.start.next
-print l, m
-#assert l == LinkedList([1])
+l = LinkedList([2, 3])
+print 'add', m + l
+print 'm -', m.display_chain()
+print 'l -', l.display_chain()
 
 
 if __name__ == '__main__':
@@ -132,6 +190,7 @@ if __name__ == '__main__':
             self.assertTrue(l1.start.next.next is not None)
             self.assertEqual(l1.start.next.next.elem, 3)
 
+
         def test_append(self):
             my_list = self.ListImplementationClass()
 
@@ -148,5 +207,99 @@ if __name__ == '__main__':
 
             self.assertEqual(my_list.count(), 2)
 
+        def test_count(self):
+            self.assertEqual(self.ListImplementationClass([1, 2, 3]).count(), 3)
 
-    unittest.main()
+        def test_pop_removes_last_item_by_default(self):
+            l1 = self.ListImplementationClass([1, 2, 3])
+
+            elem = l1.pop()
+            self.assertEqual(elem, 3)
+            self.assertEqual(l1.count(), 2)
+            self.assertEqual(l1, self.ListImplementationClass([1, 2]))
+
+        def test_pop_removes_first_item(self):
+            l1 = self.ListImplementationClass([1, 2, 3])
+
+            elem = l1.pop(0)
+            self.assertEqual(elem, 1)
+            self.assertEqual(l1.count(), 2)
+            self.assertEqual(l1, self.ListImplementationClass([2, 3]))
+
+        def test_pop_removes_last_item(self):
+            l1 = self.ListImplementationClass([1, 2, 3])
+
+            elem = l1.pop(2)
+            self.assertEqual(elem, 3)
+            self.assertEqual(l1.count(), 2)
+            self.assertEqual(l1, self.ListImplementationClass([1, 2]))
+
+        def test_pop_removes_item_in_the_middle_of_the_list(self):
+            l1 = self.ListImplementationClass([1, 2, 3, 4, 5])
+
+            elem = l1.pop(2)
+            self.assertEqual(elem, 3)
+            self.assertEqual(l1.count(), 4)
+            self.assertEqual(l1, self.ListImplementationClass([1, 2, 4, 5]))
+
+            elem = l1.pop(1)
+            self.assertEqual(elem, 2)
+            self.assertEqual(l1.count(), 3)
+            self.assertEqual(l1, self.ListImplementationClass([1, 4, 5]))
+
+        def test_pop_with_a_single_element_list(self):
+            # Default index
+            l1 = self.ListImplementationClass([9])
+
+            elem = l1.pop()
+            self.assertEqual(elem, 9)
+            self.assertEqual(l1.count(), 0)
+            self.assertEqual(l1, self.ListImplementationClass([]))
+
+            # index == 0
+            l1 = self.ListImplementationClass([9])
+
+            elem = l1.pop(0)
+            self.assertEqual(elem, 9)
+            self.assertEqual(l1.count(), 0)
+            self.assertEqual(l1, self.ListImplementationClass([]))
+
+        def test_pop_raises_an_exception_with_empty_list(self):
+            with self.assertRaises(IndexError):
+                self.ListImplementationClass().pop()
+
+            with self.assertRaises(IndexError):
+                self.ListImplementationClass().pop(0)
+
+            with self.assertRaises(IndexError):
+                self.ListImplementationClass().pop(3)
+
+        def test_pop_raises_an_exception_with_invalid_index(self):
+            with self.assertRaises(IndexError):
+                self.ListImplementationClass([1]).pop(1)
+
+            with self.assertRaises(IndexError):
+                self.ListImplementationClass([1, 2, 3]).pop(3)
+
+        def test_equals(self):
+            self.assertEqual(
+                self.ListImplementationClass([1, 2, 3]),
+                self.ListImplementationClass([1, 2, 3]))
+
+            self.assertEqual(
+                self.ListImplementationClass([]),
+                self.ListImplementationClass([]))
+
+            self.assertEqual(
+                self.ListImplementationClass([1]),
+                self.ListImplementationClass([1]))
+
+            self.assertNotEqual(
+                self.ListImplementationClass([1, 2]),
+                self.ListImplementationClass([1, 2, 3]))
+
+            self.assertNotEqual(
+                self.ListImplementationClass([1]),
+                self.ListImplementationClass([]))
+
+    #unittest.main()
