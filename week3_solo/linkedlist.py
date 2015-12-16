@@ -54,6 +54,9 @@ class LinkedList(object):
 
     def __add__(self, other):
 
+        if not isinstance(other, type(self)):
+            raise TypeError("Can only '+' object type {}".format(type(self)))
+
         added = deepcopy(self)
         for i in other:
             if i is None:
@@ -62,6 +65,9 @@ class LinkedList(object):
         return added
 
     def __iadd__(self, other):
+
+        if not isinstance(other, type(self)):
+            raise TypeError("Can only '+=' object type {}".format(type(self)))
 
         for i in other:
             if i is None:
