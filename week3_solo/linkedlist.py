@@ -29,16 +29,19 @@ from copy import deepcopy
 class Node(object):
 
     def __init__(self, elem=None, next=None):
+
         self.elem = elem
         self.next = next
 
     def __eq__(self, other):
+
         return (self.elem, self.next == other.elem, self.next)
 
 
 class LinkedList(object):
 
     def __init__(self, values=None):
+
         self.start = None
         self.end = None
         if values is not None:
@@ -46,6 +49,7 @@ class LinkedList(object):
                 self.append(val)
 
     def __str__(self):
+
         return str([i.elem for i in self if i is not None])
 
     def __add__(self, other):
@@ -66,6 +70,7 @@ class LinkedList(object):
         return self
 
     def __getitem__(self, index):
+
         if index < 0:
             index = self.count() + index
         current_node = self.start
@@ -78,6 +83,7 @@ class LinkedList(object):
         return
 
     def link(self, current_node, values):
+
         if len(values) == 0:
             self.start = None
         elif len(values) == 1:
@@ -92,6 +98,7 @@ class LinkedList(object):
         return
 
     def count(self):
+
         if self.start is None:
             return 0
         count = 1
@@ -104,6 +111,7 @@ class LinkedList(object):
         return count
 
     def append(self, value):
+
         if self.start is None:
             self.start = Node(value)
             self.end = self.start
@@ -117,17 +125,16 @@ class LinkedList(object):
         return
 
     def __eq__(self, other):
+
         return (self.__str__() == other.__str__())
 
     def pop(self, index=-1):
 
-        # raise errors
         if self.count() == 0:
             raise IndexError('No elements to pop.')
         elif index >= self.count():
             raise IndexError('Index out-of-range')
 
-        # operations
         if index == 0:
             popped = self.start.elem
             self.start = self[(index + 1)]
