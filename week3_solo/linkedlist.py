@@ -82,20 +82,9 @@ class LinkedList(object):
             current_node = current_node.next
         return
 
-    def link(self, current_node, values):
+    def __eq__(self, other):
 
-        if len(values) == 0:
-            self.start = None
-        elif len(values) == 1:
-            if self.start.elem is None:
-                self.start = Node(values[0])
-            else:
-                self.end = Node(values[0])
-        else:
-            current_node.elem, next_elem = values[0], values[1]
-            current_node.next = Node(next_elem)
-            return self.link(current_node.next, values[values.index(next_elem):])
-        return
+        return (self.__str__() == other.__str__())
 
     def count(self):
 
@@ -123,10 +112,6 @@ class LinkedList(object):
             current_end.next = Node(value)
             self.end = current_end.next
         return
-
-    def __eq__(self, other):
-
-        return (self.__str__() == other.__str__())
 
     def pop(self, index=-1):
 
