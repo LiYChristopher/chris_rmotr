@@ -1,7 +1,9 @@
 ''' implementing battleship
 '''
+
+from __future__ import division
 from collections import OrderedDict
-from random import randint
+from random import randint, choice
 
 
 class Grid(object):
@@ -23,7 +25,7 @@ class Grid(object):
                                 else None, self.grid.keys())
             row = [self.grid[e] for e in row_keys]
             print ''.join(row)
-        return 'Grid'
+        return '______________'
 
     def place(self, *ships):
         ''' takes in a list of ships and places them on the grid if ships fit
@@ -31,47 +33,29 @@ class Grid(object):
             #TODO: Need to implement this
         '''
         for ship in ships:
-            place_y = ship.position[0].capitalize()
-            place_x = int(ship.position[1])
-
-            if ship.orientation.lower() == 'h':
-                allocation = [place_y + str(i) for i in range(place_x,
-                                place_x + ship.size)]
-                print allocation
-                for loc in allocation:
-                    self.grid[loc] = ship.marker
-
-            elif ship.orientation.lower() == 'v':
-                allocation = [chr(i) + str(place_x) for i in range(ord(place_y),
-                                ord(place_y) + ship.size)]
-                print allocation
-                for loc in allocation:
-                    self.grid[loc] = ship.marker
-
-            else:
-                print "That's not proper orientation"
+            for loc in ship.position:
+                self.grid[loc] = ship.marker
 
 
 class Ship(object):
     ''' Base ship class
     '''
-    def __init__(self, count, position, orientation):
-        self.count = count
+    def __init__(self, position, orientation):
         self.position = position
         self.orientation = orientation
 
     def __repr__(self):
         # nice to have a repr which shows the actual subclass names
-        return '{cls}({c}, {p}, {o})'.format(cls=self.__class__.__name__,
-                                             c=self.count, p=self.position,
+        return '{cls}({p}, {o})'.format(cls=self.__class__.__name__,
+                                             p=self.position,
                                              o=self.orientation)
 
 
 class Aircraft(Ship):
     ''' Aircraft class
     '''
-    def __init__(self, count, position, orientation):
-        super(Aircraft, self).__init__(count, position, orientation)
+    def __init__(self, position, orientation):
+        super(Aircraft, self).__init__(position, orientation)
         self.marker = 'A|'
         self.size = 5
 
@@ -79,8 +63,8 @@ class Aircraft(Ship):
 class Submarine(Ship):
     ''' Submarine class
     '''
-    def __init__(self, count, position, orientation):
-        super(Submarine, self).__init__(count, position, orientation)
+    def __init__(self, position, orientation):
+        super(Submarine, self).__init__(position, orientation)
         self.marker = 'S|'
         self.size = 3
 
@@ -88,58 +72,360 @@ class Submarine(Ship):
 class PatrolBoat(Ship):
     ''' PatrolBoat class
     '''
-    def __init__(self, count, position, orientation):
-        super(PatrolBoat, self).__init__(count, position, orientation)
+    def __init__(self, position, orientation):
+        super(PatrolBoat, self).__init__(position, orientation)
         self.marker = 'P|'
         self.size = 2
+
+class Player(object):
+
+    shots_fired = 0
+    shots_landed = 0
+    highest_streak = 0
+    streak_track = 0    
+
+    def __init__(self, name):
+        self.name = name
+        self.grid = Grid()
+        self.enemy = None  # grid only
+        self.active = False
+        self.shipyard = Shipyard(self)
+        self.ship_locations = set([])
+        self.ship_objs = self.shipyard.shipyard()
+
+    def attack(self):
+        ''' If AI - Attack random space, until a ship is hit. After, try and
+        hit surrounding spaces to destroy remainder of ship.
+
+        If human - select coordinate, fire missile.
+        '''
+        coordinate = raw_input("Where would you like to fire? >")
+        print "{0} Firing at ... {1}".format(self.name, coordinate)
+        if self.enemy[coordinate] not in ['_|', 'X|', 'O|']:
+            print "You've hit a ship!"
+            self.enemy[coordinate] = 'X|'
+            self.shots_fired += 1
+            self.shots_landed += 1
+            self.streak_track += 1
+        else:
+            print "You missed ..."
+            if self.streak_track > self.highest_streak:
+                self.highest_streak += self.streak_track
+            self.streak_track = 0
+            self.shots_fired += 1
+        return coordinate
+    
+    def defend(self, coordinate):
+        ''' If AI - Adjust board if missile hits ship
+        
+        If human - Engage in interactions to confirm impact of missile, reflect
+        changes on grid.
+        '''
+        msg = 'Shot fired at {0}. Was there contact? (y/n)'.format(coordinate).lower()
+        confirm = raw_input(msg)
+        if confirm == 'y' and self.grid.grid[coordinate] == 'X|':
+            print "Contact confirmed."
+        elif confirm == 'n' and self.grid.grid[coordinate] == 'X|':
+            print "False. Contact has been confirmed."
+        else:
+            print "The enemy has missed. Phew!"
+        return
+
+class AI(Player):
+
+    enemy_names = ['Lord Cthulu', 'Blackbeard']
+    shots_fired = 0
+    shots_landed = 0
+    highest_streak = 0
+    streak_track = 0
+    
+    def __init__(self):
+        super(AI, self).__init__(choice(self.enemy_names))
+        self.latest_strike = None
+        self.planned_strikes = None
+        self.shipyard = Shipyard(self)
+        self.ship_objs = self.shipyard.shipyard()
+        
+    def attack(self):
+        if self.planned_strikes:
+            pass
+            
+        coordinate = choice(self.grid.grid.keys())
+        print "{0} Firing at ... {1}".format(self.name, coordinate)
+        if self.enemy[coordinate] not in ['_|', 'X|', 'O|']:
+            print "You've hit a ship!"
+            self.enemy[coordinate] = 'X|'
+            self.shots_fired += 1
+            self.shots_landed += 1
+            self.streak_track += 1
+            self.latest_strike = coordinate
+        else:
+            print "{0} missed ...".format(self.name)
+            self.enemy[coordinate] = 'O|'
+            if self.streak_track > self.highest_streak:
+                self.highest_streak += self.streak_track      
+            self.streak_track = 0
+            self.shots_fired += 1
+        return coordinate
+
+    def defend(self, coordinate):
+        pass
+
+    def plan_strikes(self, coordinate):
+        ''' Based on a successful strike, build a list
+        of coordinates for potential future successful strikes.
+        '''
+        pass
 
 
 class GameEngine(object):
     '''
     This class control gamestate, and regulates flow
     '''
+
     def __init__(self):
-        pass
+        self.players = []
+        self.ship_quant = self.query_ship_quant()
 
-    def show_available_ships(self):
-        ''' creates random number of aircrafts, submarines and patrol boats
+    def query_ship_quant(self):
+        acceptable_answers = ['3', '4', '5']
+        while True:
+            user_input = raw_input('Enter the number of ships (3-5): >')
+            if user_input not in acceptable_answers:
+                continue
+            else:
+                return int(user_input)
+
+    def turn(self):
+        ''' Rotates defender and attacker, orchestrates appropriate behaviors
+        for both.
         '''
-        num_a, num_s, num_pb = [randint(1, 4) for i in range(3)]
-        print 'You have:'
-        print '{} Aircraft (size = 5)'.format(num_a)
-        print '{} Submarine (size = 3)'.format(num_s)
-        print '{} Patrol Boat (size = 2)'.format(num_pb)
-        return num_a, num_s, num_pb
-    
-    def choose_ships(self, numa, nums, numpb):
-        ''' follows the Defend strategy for creating the ships.
-            return the actual relevant ship objects
+        coordinate = None
+        # Sorta hacky, but it's fine - Filter out who's the attacker and defender
+        attacker = filter(lambda x: x if x.active else None,
+                                    self.players)[0]
+        defender = filter(lambda x: x if not x.active else None,
+                                    self.players)[0]
+
+        # Print Grids, conduct appropriate responses. Set 'active' to new values
+        print "It's {}'s turn to attack!".format(attacker.name)
+
+        if not isinstance(attacker, AI):
+            print attacker.grid
+
+        elif not isinstance(defender, AI):
+            pass
+
+        coordinate = attacker.attack()
+        attacker.active = False
+
+        defender.defend(coordinate)
+        defender.active = True
+        print "\n"*2
+        return
+
+    def set_rotation(self):
+        ''' Randomly selects first player, setting their 'active' attribute to 
+        true. 
         '''
-        aircrafts_input = raw_input('Position, Orientation for Aircrafts: ')
-        submarines_input = raw_input('Position, Orientation for Submarines: ')
-        patrol_boats_input = raw_input('Position, Orientation for Patrol Boats: ')
-    
-        a_pos, a_orient = map(str.strip, aircrafts_input.split(','))
-        s_pos, s_orient = map(str.strip, submarines_input.split(','))
-        pb_pos, pb_orient = map(str.strip, patrol_boats_input.split(','))
-    
-        # create ships
-        aircrafts = Aircraft(numa, a_pos, a_orient)
-        submarines = Submarine(nums, s_pos, s_orient)
-        patrol_boats = PatrolBoat(numpb, pb_pos, pb_orient)
-        return aircrafts, submarines, patrol_boats
-    
+        first_player = choice(self.players)
+        print "{} has been selected to go first.".format(first_player.name)
+        first_player.active = True
+
     def initialize(self):
-        grid = Grid()
-        print grid
-        numa, nums, numpb = self.show_available_ships() # get number of aircrafts from show_available_ships
-        air, sub, pb = self.choose_ships(numa, nums, numpb)   #user inputs ship placement
+        player_name = raw_input("What's your name, captain? > ")
+        self.player = Player(player_name)
+        self.computer = AI()
+        self.computer.grid.place(*self.computer.ship_objs)
+        self.player.grid.place(*self.player.ship_objs)
+
+        print "___ YOUR FLEET ___"
+        print self.player.grid
+
+        # Sets enemy attribute to the opposing player
+        self.player.enemy = self.computer.grid.grid
+        self.computer.enemy = self.player.grid.grid
+        self.players.append(self.player)
+        self.players.append(self.computer)
+        # Select who goes first
+        self.set_rotation()
+
+    def detect_win(self):
+        '''
+        If all markers on either marks
+        '''
+
+        player_test = set(self.player.grid.grid.values())
+        computer_test = set(self.computer.grid.grid.values())
+
+        if player_test == set(['_|', 'X|']):
+            print "All of {}'s ships are destroyed.".format(self.player.name)
+            print "{} has won the game!".format(self.computer.name)
+        elif computer_test == set(['_|', 'X|']):
+            print "All of {}'s ships are destroyed.".format(self.computer.name)
+            print "{} has won the game!".format(self.player.name)
+        else:
+            return False
+        return True
+
+    def game_summary(self):
+        ''' Generate and display game statistics. '''
+        for p in self.players:
+            print "\nName: {}".format(p.name)
+            print "\t Hit Percentage: {0:.2f}% ({1}/{2})".format((p.shots_landed / p.shots_fired) * 100,
+                                                            p.shots_landed, p.shots_fired)
+            print "\t Longest Streak: {}".format(p.highest_streak)
+
+    def play(self):
+
+        while not self.detect_win():
+
+            self.turn()
+
+        self.game_summary()
+        return
+
+
+class Shipyard(object):
+    '''
+    Class to hold helper functions
+    '''
+    g = Grid()
+
+    def __init__(self, player):
+        self.available_ship_type = [Submarine, Aircraft, PatrolBoat]
+        self.player = player
+        self.human = False if isinstance(player, AI) else True
     
-        print grid.place(air, sub, pb)    #takes ships ==> places them on grid ==> prints for user
-        print grid
+    def in_bounds(self, position):
+        '''
+        Evualates if a position is in bounds == conforms to A1 - J10.
+        Returns boolean.
+        '''
+        for p in position:
+            if p not in self.g.grid.keys():
+                return False 
+        return True
 
+    def placement(self, position, size, orientation):
+        '''
+        Outputs a list of coordinates for a potential ship with orientation.
+        Example output: [['A1', 'A2', 'A3'],'h']
+        '''
+        place_y, place_x = position[0], int(position[1])
 
+        if orientation == 'h':
+            allocation = [place_y + str(i) for i in range(place_x,
+                            place_x + size)]
+
+        elif orientation == 'v':
+            allocation = [chr(i) + str(place_x) for i in range(ord(place_y),
+                            ord(place_y) + size)]
+
+        return allocation
+        
+    def is_in_locations(self, potential_new_ship):
+        '''
+        Inputs ship candidate and compares against all coordinates
+        in Player.ship_locations to make sure there is no overlap.
+        Return boolean. True == is in list, False == not in list
+        '''
+        for point in potential_new_ship:
+            if point in self.player.ship_locations:
+                return True
+        return False
+        
+    def rand_ship(self, ship_type):
+
+        position = choice(self.g.grid.keys())
+        orientation = choice(['h', 'v'])
+
+        if ship_type is Submarine: 
+            size = 3
+        elif ship_type is Aircraft: 
+            size = 5
+        else: 
+            size = 2
+
+        potential_ship = self.placement(position, size, orientation)
+        return ship_type(potential_ship, orientation)
+
+    def choose_ship(self, ship_type):
+        ''' For the human player. '''
+        
+        print "Current occupied tiles:", self.player.ship_locations
+        
+        if ship_type is Submarine:
+            print "Please choose coordinates for your Submarine."
+            size = 3
+        elif ship_type is Aircraft:
+            print "Please choose coordinates for your Aircraft Carrier."
+            size = 5
+        else:
+            print "Please choose coordinates for your Patrol Boat."
+            size = 2
+
+        while True:
+            position = ''
+            orientation = ''
+
+            while position not in self.g.grid.keys():
+                position = raw_input("Place ship at what coordinate? (A1-J10) > ")
+
+            while orientation not in ['h', 'v']:
+                orientation = raw_input("Orientation? ('h' or 'v') > ").lower()
+
+            potential_ship = self.placement(position, size, orientation)
+            if not self.validate_ship(potential_ship):
+                print "Sorry, your ship is in conflict (out of bonds, or colliding)."
+                print "Please try setting it again!"
+                continue 
+            return ship_type(potential_ship, orientation)
+        return
+
+    def validate_ship(self, potential_ship_position):
+        # collision
+        if self.is_in_locations(potential_ship_position):
+            return False
+        # out of bounds check
+        if not self.in_bounds(potential_ship_position):
+            return False
+        else:
+            self.player.ship_locations = self.player.ship_locations | set(potential_ship_position)
+            return True
+    
+    def shipyard(self):
+        '''
+        Outputs 'fleet' of ships based of quantity set by user.
+        First 3 ships will be Submarine, Aircraft, PatrolBoat, all optional ships will be randomly chosen from that list
+        '''
+        fleet = []
+        quantity = game.ship_quant
+        build_queue = list(self.available_ship_type)  
+        optional_ship_count = quantity - len(build_queue)
+        for i in range(optional_ship_count):
+            new_ship_type = choice(self.available_ship_type)
+            build_queue.append(new_ship_type)
+
+        while build_queue:
+            item = build_queue.pop()
+            if self.human is True:
+                new_ship = self.choose_ship(item)
+            else:
+                new_ship = self.rand_ship(item)
+                if not self.validate_ship(new_ship.position):
+                    build_queue.append(item)
+                    continue
+            fleet.append(new_ship)
+        return fleet
+        
 #implementation zone
 if __name__ == '__main__':
     game = GameEngine()
+   
+    #human = Player('test player')    #testing purposes
     game.initialize()
+
+    game.play()
+
+  
