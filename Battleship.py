@@ -1,4 +1,6 @@
-''' implementing battleship
+''' command-line implementation of Battleship,
+
+by Avi Schwartz and Chris Li
 '''
 
 from __future__ import division
@@ -206,24 +208,22 @@ class AI(Player):
     def plan_strikes(self, hit):
         ''' Based on a successful strike, build a list
         of coordinates for potential future successful strikes.
+
+        *still testing, not quite functional yet
         '''
         u = [chr(i) + hit[1] for i in range(ord(hit[0]) - 4, ord(hit[0]))]
         d = [chr(i) + hit[1] for i in range(ord(hit[0]) + 1, ord(hit[0]) + 5)]
         l = [hit[0] + chr(i) for i in range(ord(hit[1]) - 4, ord(hit[1]))]
         r = [hit[0] + chr(i) for i in range(ord(hit[1]) + 1, ord(hit[1]) + 5)]
 
-        print 'UP', u
-        print 'DOWN', d
-        print 'LEFT', l
-        print 'RIGHT', r
-
         check = lambda x: x if x in self.grid.grid.keys() else None
         check2 = lambda x: x if x in self.locations_already_fired else None
 
-        self.planned_strikes |= set((filter(lambda x: x if check2(check(x)) else None, u)))
-        self.planned_strikes |= set((filter(lambda x: x if check2(check(x)) else None, u)))
-        self.planned_strikes |= set((filter(lambda x: x if check2(check(x)) else None, u)))
-        self.planned_strikes |= set((filter(lambda x: x if check2(check(x)) else None, u)))
+        # these need to be cleaned up
+        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, u))
+        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, d))
+        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, l))
+        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, r))
         print 'PLANNED STRIKES: ', self.planned_strikes
         return
 
@@ -476,9 +476,7 @@ class Shipyard(object):
 
 #implementation zone
 if __name__ == '__main__':
+
     game = GameEngine()
-
     game.initialize()
-
     game.play()
-  
