@@ -13,8 +13,11 @@ init(autoreset=True)
 class Grid(object):
     ''' 10x10 (A1-J10) Grid via OrderedDict where ships reside. '''
     def __init__(self):
-        self._inputs = [i+str(j) for i in map(chr, range(65, 75)) for j in range(1, 11)]
-        self.grid = OrderedDict(zip(self._inputs, [Fore.BLUE + '_|']*len(self._inputs)))
+        self._inputs = [i + str(j) for i in map(chr, range(65, 75))
+                        for j in range(1, 11)]
+
+        self.grid = OrderedDict(zip(self._inputs,
+                                [Fore.BLUE + '_|']*len(self._inputs)))
 
     def __repr__(self):
         return 'Grid({})'.format(self.grid)
@@ -24,9 +27,9 @@ class Grid(object):
         for row in range(65, 75):
             row_idx = chr(row)
             row_keys = filter(lambda key: key if key.startswith(row_idx)
-                                else None, self.grid.keys())
+                              else None, self.grid.keys())
             row = [self.grid[e] for e in row_keys]
-            print ''.join(row)
+            print  '\t', ''.join(row)
         return '\n'
 
     def place(self, *ships):
@@ -37,6 +40,7 @@ class Grid(object):
         for ship in ships:
             for loc in ship.position:
                 self.grid[loc] = ship.marker
+        return
 
 
 class Ship(object):
@@ -48,8 +52,8 @@ class Ship(object):
     def __repr__(self):
         # nice to have a repr which shows the actual subclass names
         return '{cls}({p}, {o})'.format(cls=self.__class__.__name__,
-                                             p=self.position,
-                                             o=self.orientation)
+                                        p=self.position,
+                                        o=self.orientation)
 
 
 class Aircraft(Ship):
@@ -112,15 +116,15 @@ class Player(object):
         if coordinate in self.locations_already_fired:
             self.misscalls += 1
 
-        print "{0} Firing at ... {1}".format(self.name, coordinate)
+        print "\t{0} Firing at ... {1}".format(self.name, coordinate)
         if self.enemy[coordinate] not in self.markers.values():
-            print "You've hit a ship!"
+            print Fore.GREEN + "\tYou've hit a ship!"
             self.enemy[coordinate] = self.markers['hit']
             self.shots_fired += 1
             self.shots_landed += 1
             self.streak_track += 1
         else:
-            print "You missed ..."
+            print "\tYou missed ..."
             if self.enemy[coordinate] == self.markers['hit']:
                 pass
             else:
@@ -140,15 +144,15 @@ class Player(object):
         '''
         confirm = ''
         while confirm not in ['y', 'n']:
-            msg = 'Shot fired at {0}. Was there contact? (y/n) > '.format(coordinate)
+            msg = '\tShot fired at {0}. Was there contact? (y/n) > '.format(coordinate)
             confirm = raw_input(msg)
         if confirm == 'y' and self.grid.grid[coordinate] == self.markers['hit']:
-            print "Contact confirmed."
+            print "\tContact confirmed."
         elif confirm == 'n' and self.grid.grid[coordinate] == self.markers['hit']:
-            print "False. Contact has been confirmed."
+            print "\tFalse. Contact has been confirmed."
             self.misscalls += 1
         else:
-            print "The enemy has missed. Phew!"
+            print "\tThe enemy has missed. Phew!"
         return
 
 
@@ -174,12 +178,12 @@ class AI(Player):
     def attack(self):
         if len(self.planned_strikes) >= 1:
             coordinate = self.planned_strikes.pop()
-            print 'Planned coordinate ....', coordinate
         else:
             coordinate = choice(self.grid.grid.keys())
-        print "{0} Firing at ... {1}".format(self.name, coordinate)
+        print "\t{0} Firing at ... {1}".format(self.name, coordinate)
+        self.locations_already_fired.add(coordinate)
         if self.enemy[coordinate] not in self.markers.values():
-            print "You've hit a ship!"
+            print Fore.RED + "\t{0} hit a ship!".format(self.name)
             self.enemy[coordinate] = self.markers['hit']
             self.shots_fired += 1
             self.shots_landed += 1
@@ -187,7 +191,7 @@ class AI(Player):
             self.latest_strike = coordinate
             self.plan_strikes(coordinate)
         else:
-            print "{0} missed ...".format(self.name)
+            print "\t{0} missed ...".format(self.name)
             if coordinate in self.planned_strikes:
                 self.planned_missed_strikes += 1
                 if self.planned_missed_strikes >= 5:
@@ -207,24 +211,20 @@ class AI(Player):
 
     def plan_strikes(self, hit):
         ''' Based on a successful strike, build a list
-        of coordinates for potential future successful strikes.
+        of coordinates for potential future successful strikes. '''
 
-        *still testing, not quite functional yet
-        '''
-        u = [chr(i) + hit[1] for i in range(ord(hit[0]) - 4, ord(hit[0]))]
-        d = [chr(i) + hit[1] for i in range(ord(hit[0]) + 1, ord(hit[0]) + 5)]
-        l = [hit[0] + chr(i) for i in range(ord(hit[1]) - 4, ord(hit[1]))]
-        r = [hit[0] + chr(i) for i in range(ord(hit[1]) + 1, ord(hit[1]) + 5)]
+        u = [chr(i) + hit[1] for i in range(ord(hit[0]) - 1, ord(hit[0]))]
+        d = [chr(i) + hit[1] for i in range(ord(hit[0]) + 1, ord(hit[0]) + 2)]
+        l = [hit[0] + chr(i) for i in range(ord(hit[1]) - 1, ord(hit[1]))]
+        r = [hit[0] + chr(i) for i in range(ord(hit[1]) + 1, ord(hit[1]) + 2)]
 
         check = lambda x: x if x in self.grid.grid.keys() else None
-        check2 = lambda x: x if x in self.locations_already_fired else None
+        check2 = lambda x: x if x not in self.locations_already_fired else None
 
-        # these need to be cleaned up
-        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, u))
-        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, d))
-        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, l))
-        self.planned_strikes |= set(filter(lambda x: x if check2(check(x)) else None, r))
-        print 'PLANNED STRIKES: ', self.planned_strikes
+        for direction in [u, d, l, r]:
+            new_moves = set(filter(lambda x: x if check2(check(x))
+                                   else None, direction))
+            self.planned_strikes |= new_moves
         return
 
     def abandon_plan_strikes(self):
@@ -261,7 +261,7 @@ class GameEngine(object):
                           self.players)[0]
 
         # print Grids, conduct appropriate responses. Set 'active' to new values
-        print Fore.WHITE + Style.BRIGHT + "\nIt's {}'s turn to attack!".format(attacker.name)
+        print Fore.WHITE + Style.BRIGHT + "\n --- It's {}'s turn to attack! ---".format(attacker.name)
 
         if not isinstance(attacker, AI):
             print '\n', attacker.grid
@@ -278,7 +278,7 @@ class GameEngine(object):
         ''' Randomly selects first player,
         setting their 'active' attribute to true. '''
         first_player = choice(self.players)
-        print "{} has been selected to go first.".format(first_player.name)
+        print "\n{} has been selected to go first.".format(first_player.name)
         first_player.active = True
 
     def initialize(self):
@@ -286,13 +286,16 @@ class GameEngine(object):
         player_name = raw_input("What's your name, captain? > ")
         self.player = Player(player_name)
         self.computer = AI()
+
         player_grid, computer_grid = self.player.grid, self.computer.grid
+
         computer_grid.place(*self.computer.ship_objs)
         player_grid.place(*self.player.ship_objs)
 
         # Sets enemy attribute to the opposing player
         self.player.enemy = computer_grid.grid
         self.computer.enemy = player_grid.grid
+
         self.players.append(self.player)
         self.players.append(self.computer)
 
@@ -312,23 +315,28 @@ class GameEngine(object):
                    self.player.markers['water']])
 
         if player_test == win:
-            print "All of {}'s ships are destroyed.".format(self.player.name)
-            print "{} has won the game!".format(self.computer.name)
+            print Fore.RED + "All of {}'s ships are destroyed.".format(self.player.name)
+            print Fore.GREEN + Style.BRIGHT + "{} has won the game!".format(self.computer.name)
         elif computer_test == win:
-            print "All of {}'s ships are destroyed.".format(self.computer.name)
-            print "{} has won the game!".format(self.player.name)
+            print Fore.RED + "All of {}'s ships are destroyed.".format(self.computer.name)
+            print Fore.GREEN + Style.BRIGHT + "{} has won the game!".format(self.player.name)
         else:
             return False
         return True
 
     def game_summary(self):
         ''' Generate and display game statistics. '''
+        print "*A miss-call is when you fire upon a location that's"
+        print "previously been fired upon, or when you falsely deny enemy"
+        print "contact with one of your ships."
+
         for p in self.players:
             print "\nName: {}".format(p.name)
             print "\t Hit Percentage: {0:.2f}% ({1}/{2})".format((p.shots_landed / p.shots_fired) * 100,
                                                                  p.shots_landed, p.shots_fired)
             print "\t Longest Streak: {}".format(p.highest_streak)
-            print "\t # of Miss-calls: {}".format(p.misscalls)
+
+            print "\t *# of Miss-calls: {}".format(p.misscalls)
 
     def play(self):
 
@@ -433,7 +441,7 @@ class Shipyard(object):
             if not self.validate_ship(potential_ship):
                 print "Sorry, your ship is in conflict (out of bonds, or colliding)."
                 print "Please try setting it again!"
-                continue 
+                continue
             return ship_type(potential_ship, orientation)
         return
 
@@ -445,7 +453,8 @@ class Shipyard(object):
         if not self.in_bounds(potential_ship_position):
             return False
         else:
-            self.player.ship_locations = self.player.ship_locations | set(potential_ship_position)
+            self.player.ship_locations = self.player.ship_locations \
+                                        | set(potential_ship_position)
             return True
 
     def shipyard(self):
