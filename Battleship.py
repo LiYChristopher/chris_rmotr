@@ -48,6 +48,7 @@ class Ship(object):
     def __init__(self, position, orientation):
         self.position = position
         self.orientation = orientation
+        self.marker = None
 
     def __repr__(self):
         # nice to have a repr which shows the actual subclass names
